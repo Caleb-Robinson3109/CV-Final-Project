@@ -10,3 +10,4 @@ data/
 05-18_coco_ours_noshape.json
 KITRO.o*
 */venv
+venv/
