@@ -11,3 +11,5 @@ data/
 KITRO.o*
 */venv
 venv/
+/AlphaPose
+test.py

@@ -33,7 +33,36 @@ sys.path.append(os.path.abspath(".."))
 
 import eval_KITRO
 
-def make_dataset():
+"""
+def save_single_sample():
+    input_path = '../data/ProcessedData_CLIFFpred_w2DKP_3dpw.pt'
+    out_path = '../data/ProcessedData_CLIFFpred_w2DKP_single.pt'
+
+    if os.path.exists(out_path):
+        print(f"{out_path} already exists. Skipping.")
+        return
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    data = torch.load(input_path, map_location=device)
+
+    single_sample = {}
+
+    for key, value in data.items():
+        if torch.is_tensor(value):
+            single_sample[key] = value[0:1]  # take first sample, keep batch dim
+        elif isinstance(value, list):
+            single_sample[key] = [value[0]]  # first element
+        else:
+            try:
+                single_sample[key] = np.expand_dims(value[0], axis=0)  # first sample
+            except:
+                raise TypeError(f"Unsupported type for key {key}: {type(value)}")
+
+    torch.save(single_sample, out_path)
+    print(f"Saved single sample to {out_path}")
+"""
+
+def make_combined_pt():
     path_3dpw = '../data/ProcessedData_CLIFFpred_w2DKP_3dpw.pt'
     path_hm36 = '../data/ProcessedData_CLIFFpred_w2DKP_HM36.pt'
     out_path = "../data/ProcessedData_CLIFFpred_w2DKP_Both.pt"
@@ -68,21 +97,26 @@ def make_dataset():
 
     torch.save(merged, out_path)
 
-
+"""
 def get_dataset():
 
     #get the dataset/ create a merged data set if needed
-    make_dataset
-
+    #make_dataset
+    #save_single_sample
     #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     #dataset = torch.load('../data/ProcessedData_CLIFFpred_w2DKP_Both.pt', map_location=torch.device(device))
     
+    #kitro_config = {
+    #    'shape_opti_n_iter': 10,
+    #    'n_refine_loop': 10,
+    #}
+
     kitro_config = {
-        'shape_opti_n_iter': 10,
-        'n_refine_loop': 10,
+        'shape_opti_n_iter': 2,
+        'n_refine_loop': 2,
     }
     
-    data_path = '../data/ProcessedData_CLIFFpred_w2DKP_Both.pt'
+    data_path = '../data/ProcessedData_CLIFFpred_w2DKP_single.pt'
     dataset = eval_KITRO.SMPL_Estimates_Dataset(data_path)
     dataloader = eval_KITRO.DataLoader(dataset, batch_size=256, shuffle=False)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -106,7 +140,8 @@ def get_dataset():
             'keypoints_2d': batch['keypoints_2d'].to(device),  # 2D keypoints (shape: [b, 24, 2])
         }
         with torch.no_grad():
-            updated_smpl_output = eval_KITRO.KITRO_refine(curr_batch_size, init_smpl_estimate=init_smpl_estimate, evidence_2d=evidence_2d, J_regressor=J_regressor, kitro_cfg=kitro_config, smpl=smpl)
+            updated_smpl_output = eval_KITRO.KITRO_refine(batch_size=2, init_smpl_estimate=init_smpl_estimate, evidence_2d=evidence_2d, J_regressor=J_regressor, kitro_cfg=kitro_config, smpl=smpl)
+            #updated_smpl_output = eval_KITRO.KITRO_refine(curr_batch_size, init_smpl_estimate=init_smpl_estimate, evidence_2d=evidence_2d, J_regressor=J_regressor, kitro_cfg=kitro_config, smpl=smpl)
             refined_thetas = updated_smpl_output['refined_thetas']
             refined_shape = updated_smpl_output['refined_shape']
             refined_cam = updated_smpl_output['refined_cam']
@@ -121,42 +156,35 @@ def get_dataset():
 
     #turn the datasets into 1 np.array
 """
-    N = dataset['pred_theta'].shape[0]
 
-    print(f"N1: {N1}, N2: {N2}")
+def get_dataset_pre_kitro():
+    make_combined_pt()
 
-    subset1 = []
-    subset2 = [] 
-
-    for i in range(N1):
-        sample = np.concatenate([
-            dataset_3dpw['pred_theta'][i].reshape(-1),
-            dataset_3dpw['pred_beta'][i].reshape(-1),
-            dataset_3dpw['pred_cam'][i].reshape(-1),
-            dataset_3dpw['intrinsics'][i].reshape(-1),
-            dataset_3dpw['keypoints_2d'][i].reshape(-1),
-            dataset_3dpw['GT_pose'][i].reshape(-1),
-            dataset_3dpw['GT_beta'][i].reshape(-1),
-        ])
-        subset1.append(sample)
-
-    for i in range(N2):
-        sample = np.concatenate([
-            dataset_hm36['pred_theta'][i].reshape(-1),
-            dataset_hm36['pred_beta'][i].reshape(-1),
-            dataset_hm36['pred_cam'][i].reshape(-1),
-            dataset_hm36['intrinsics'][i].reshape(-1),
-            dataset_hm36['keypoints_2d'][i].reshape(-1),
-            dataset_hm36['GT_pose'][i].reshape(-1),
-            dataset_hm36['GT_beta'][i].reshape(-1),
-        ])
-        subset2.append(sample)
-
-    print(f"s1: {len(subset1)} {len(subset1[0])}, s2: {len(subset2)} {len(subset2[0])}")
-    dataset = subset1 + subset2
-    return np.array(dataset)
-    """
+    data_path = "../data/ProcessedData_CLIFFpred_w2DKP_Both.pt"
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    data = torch.load(data_path, map_location=torch.device(device))
     
+    N = data['pred_theta'].shape[0]
+    dataset = []
+
+    for i in range(len(data['imagename'])):
+        sample = np.concatenate([
+            data['pred_theta'][i].reshape(-1),
+            data['pred_beta'][i].reshape(-1),
+            data['pred_cam'][i].reshape(-1),
+            data['intrinsics'][i].reshape(-1),
+            data['keypoints_2d'][i].reshape(-1),
+            data['GT_pose'][i].reshape(-1),
+            data['GT_beta'][i].reshape(-1),
+        ])
+    
+        dataset.append(sample)
+
+    return np.array(dataset)
+
+def get_dataset_post_kitro():
+    pass
+
 def split_dataset(dataset, num_splits: int):
     seed = int(time.time())
     np.random.seed(seed)
@@ -165,11 +193,12 @@ def split_dataset(dataset, num_splits: int):
     parts = [dataset[split] for split in splits]
     return parts
     
-
+"""
 def main():
-    print("hello!")
-    make_dataset()
-    get_dataset()
+    print("main")
+    data = get_dataset_pre_kitro()
+    print(f"{np.shape(data)}")
 
 if __name__ == "__main__":
     main()
+"""
