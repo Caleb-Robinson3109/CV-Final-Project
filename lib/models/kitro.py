@@ -5,6 +5,7 @@ import torch.nn as nn
 
 from lib.utils.geometry import *
 
+cpu_device = torch.device('cpu')
 J24_INDEX_IN_59 = [8,12,9,49,13,10,50,30,25,51,52,53,1,54,55,56,5,2,6,3,7,4,57,58]
 PARENTS = [-1,0,0,0,1,2,3,4,5,6,7,8,9,9,9,12,13,14,16,17,18,19,20,21]
 
@@ -41,10 +42,10 @@ def batch_cal_swing(t, p):
 
     # Convert location revolve to rot_mat by rodrigues
     rx, ry, rz = torch.split(axis, 1, dim=1)
-    zeros = torch.zeros((batch_size, 1, 1)).cuda()
+    zeros = torch.zeros((batch_size, 1, 1)).to(cpu_device)
 
     K = torch.cat([zeros, -rz, ry, rz, zeros, -rx, -ry, rx, zeros], dim=1).view((batch_size, 3, 3))
-    ident = torch.eye(3).unsqueeze(dim=0).cuda()
+    ident = torch.eye(3).unsqueeze(dim=0).to(cpu_device)
     rot_mat_loc = ident + sin * K + (1 - cos) * torch.matmul(K, K)
     return rot_mat_loc
 
@@ -66,7 +67,7 @@ def batch_cal_2solutions(Ap, Bp, OA_len, bone_len, inv_intrinsics):
 
     # Depending on the accuracy of the estimated terms, the square root term may become negative. For numerical stability, we rectify it to 0.
     inner = bone_len**2 - OA_len**2 * sin**2
-    scale = torch.sqrt(torch.where(inner > 0, inner, torch.tensor(0).float().cuda())) 
+    scale = torch.sqrt(torch.where(inner > 0, inner, torch.tensor(0).float().to(cpu_device))) 
 
     FB = scale * b  
     AB1 = AF + FB  
@@ -117,7 +118,7 @@ def batch_cal_2d_error_after_align(refine_output_i_joints, chain_index, cam_R, c
     # Calculate 2D error after alignment on root joint
 
     myj2d = perspective_projection(refine_output_i_joints, cam_R, cam_t, intrinsics)
-    myj2d = torch.cat((myj2d, torch.ones(myj2d.shape[0], myj2d.shape[1], 1).type_as(myj2d)), dim=-1).squeeze(0).float().cuda()[:,J24_INDEX_IN_59]
+    myj2d = torch.cat((myj2d, torch.ones(myj2d.shape[0], myj2d.shape[1], 1).type_as(myj2d)), dim=-1).squeeze(0).float().to(cpu_device)[:,J24_INDEX_IN_59]
     delta = myj2d[:,alignjid:alignjid+1] - keypoints_2d[:,alignjid:alignjid+1]
     j2d_delta = keypoints_2d + delta
     return torch.mean(torch.index_select((myj2d - j2d_delta)**2, 1, chain_index), dim=(-1,-2))
@@ -134,8 +135,8 @@ def optimize_shape(pred_shape, refined_thetas, refined_cam, intrinsics, keypoint
     )
 
     # Align 2D based on parent joint
-    myj2d = perspective_projection(refine_output_curr.joints, torch.eye(3).repeat(batch_size,1,1).cuda(), refined_cam, intrinsics)
-    myj2d = torch.cat((myj2d, torch.ones(myj2d.shape[0], myj2d.shape[1], 1).type_as(myj2d)), dim=-1).float().cuda()
+    myj2d = perspective_projection(refine_output_curr.joints, torch.eye(3).repeat(batch_size,1,1).to(cpu_device), refined_cam, intrinsics)
+    myj2d = torch.cat((myj2d, torch.ones(myj2d.shape[0], myj2d.shape[1], 1).type_as(myj2d)), dim=-1).float().to(cpu_device)
     myj2d = myj2d[:,J24_INDEX_IN_59]
     delta = myj2d[:,0:1] - keypoints_2d[:,0:1]
     keypoints_2d_delta = keypoints_2d + delta
@@ -148,7 +149,7 @@ def optimize_shape(pred_shape, refined_thetas, refined_cam, intrinsics, keypoint
         # Initialize the shape parameters
         shape_params = pred_shape.detach().clone().requires_grad_(True)
         refined_thetas.requires_grad_(False)
-        rotation_matrix = torch.eye(3).repeat(batch_size, 1, 1).cuda()
+        rotation_matrix = torch.eye(3).repeat(batch_size, 1, 1).to(cpu_device)
         rotation_matrix.requires_grad_(False)
         refined_cam.requires_grad_(False)
         intrinsics.requires_grad_(False)
@@ -203,8 +204,8 @@ def solution_calculation_chain(refine_output_curr, inv_intrinsics, keypoints_2d,
     n_branch = 1
     Oparent_len = Oparent_len[:,None,:]
     result = {}
-    similarity = torch.ones(batch_size)[:,None].cuda()
-    rotmat = torch.eye(3)[None, None, :].repeat(batch_size,1,1,1).cuda()
+    similarity = torch.ones(batch_size)[:,None].to(cpu_device)
+    rotmat = torch.eye(3)[None, None, :].repeat(batch_size,1,1,1).to(cpu_device)
     for child in chain:
         parent = PARENTS[child]
         child_id = J24_INDEX_IN_59[child]
@@ -254,10 +255,10 @@ def solution_selection(refined_thetas, refined_shape, smpl, refined_cam, intrins
             pose2rot=False,
     )
     Oparent_len = torch.sign((refine_output_curr.joints + refined_cam.unsqueeze(1))[:,:,-1:]) * torch.norm(refine_output_curr.joints + refined_cam.unsqueeze(1), dim=-1, keepdim=True)
-    reproj2d = perspective_projection(refine_output_curr.joints, torch.eye(3).repeat(batch_size,1,1).cuda(), refined_cam, intrinsics)
-    reproj2d = torch.cat((reproj2d, torch.ones(reproj2d.shape[0], reproj2d.shape[1], 1).type_as(reproj2d)), dim=-1).float().cuda()[:,J24_INDEX_IN_59]
+    reproj2d = perspective_projection(refine_output_curr.joints, torch.eye(3).repeat(batch_size,1,1).to(cpu_device), refined_cam, intrinsics)
+    reproj2d = torch.cat((reproj2d, torch.ones(reproj2d.shape[0], reproj2d.shape[1], 1).type_as(reproj2d)), dim=-1).float().to(cpu_device)[:,J24_INDEX_IN_59]
 
-    selection = -torch.ones([batch_size,24]).long().cuda()
+    selection = -torch.ones([batch_size,24]).long().to(cpu_device)
 
     # left leg
     chain = [1,4,7,10]
@@ -329,8 +330,8 @@ def refine_alignKT(refined_thetas, refined_shape, smpl, refined_cam, intrinsics,
         Oparent_len = torch.sign((refine_output_curr.joints + refined_cam.unsqueeze(1))[:,parent_id,-1:]) * torch.norm(refine_output_curr.joints[:, parent_id] + refined_cam, dim=-1, keepdim=True)
 
         # Align 2D based on parent joint
-        myj2d = perspective_projection(refine_output_curr.joints, torch.eye(3).repeat(batch_size,1,1).cuda(), refined_cam, intrinsics)
-        myj2d = torch.cat((myj2d, torch.ones(myj2d.shape[0], myj2d.shape[1], 1).type_as(myj2d)), dim=-1).float().cuda()[:,J24_INDEX_IN_59]
+        myj2d = perspective_projection(refine_output_curr.joints, torch.eye(3).repeat(batch_size,1,1).to(cpu_device), refined_cam, intrinsics)
+        myj2d = torch.cat((myj2d, torch.ones(myj2d.shape[0], myj2d.shape[1], 1).type_as(myj2d)), dim=-1).float().to(cpu_device)[:,J24_INDEX_IN_59]
         delta = myj2d[:,i:i+1] - keypoints_2d[:,i:i+1]
         keypoints_2d_delta = keypoints_2d + delta
 
@@ -377,7 +378,7 @@ def refine_alignKT(refined_thetas, refined_shape, smpl, refined_cam, intrinsics,
 
             # pose parameter update
             if i==0:
-                R_parent = torch.eye(3).repeat(batch_size,1,1).cuda()
+                R_parent = torch.eye(3).repeat(batch_size,1,1).to(cpu_device)
             else:
                 j = PARENTS[i]
                 R_parent = refined_thetas_copy[:,j]
@@ -420,14 +421,14 @@ def refine_alignKT(refined_thetas, refined_shape, smpl, refined_cam, intrinsics,
             already_refined_index += list(child)
 
         # rewind theta if the 2D reprojection gets even worser after refinemnet
-        old_2d_err = batch_cal_2d_error_after_align(refine_output_curr.joints, torch.tensor([ii for ii in already_refined_index]).cuda(), torch.eye(3).repeat(batch_size,1,1).cuda(), refined_cam, intrinsics, keypoints_2d, alignjid=i)
+        old_2d_err = batch_cal_2d_error_after_align(refine_output_curr.joints, torch.tensor([ii for ii in already_refined_index]).to(cpu_device), torch.eye(3).repeat(batch_size,1,1).to(cpu_device), refined_cam, intrinsics, keypoints_2d, alignjid=i)
         refine_output_curr = smpl(
             betas=refined_shape,
             body_pose=refined_thetas[:, 1:],
             global_orient=refined_thetas[:, 0].unsqueeze(1),
             pose2rot=False,
         )
-        new_2d_err = batch_cal_2d_error_after_align(refine_output_curr.joints, torch.tensor([ii for ii in already_refined_index]).cuda(), torch.eye(3).repeat(batch_size,1,1).cuda(), refined_cam, intrinsics, keypoints_2d, alignjid=i)
+        new_2d_err = batch_cal_2d_error_after_align(refine_output_curr.joints, torch.tensor([ii for ii in already_refined_index]).to(cpu_device), torch.eye(3).repeat(batch_size,1,1).to(cpu_device), refined_cam, intrinsics, keypoints_2d, alignjid=i)
         indicator = new_2d_err < old_2d_err
         refined_thetas = torch.where(indicator[:,None,None,None].repeat(1,24,3,3) == True, refined_thetas, refined_thetas_copy)
         refine_output_curr = smpl(
@@ -459,7 +460,7 @@ def KITRO_refine(batch_size, init_smpl_estimate, evidence_2d, J_regressor=None, 
 
     ############## 2D Evidence ###############
     keypoints_2d = evidence_2d['keypoints_2d']#[:,J24_INDEX_IN_59] # [b,24,2]
-    keypoints_2d = torch.cat((keypoints_2d, torch.ones(keypoints_2d.shape[0], keypoints_2d.shape[1], 1).type_as(keypoints_2d)), dim=-1).float().cuda() # [b,24,3]
+    keypoints_2d = torch.cat((keypoints_2d, torch.ones(keypoints_2d.shape[0], keypoints_2d.shape[1], 1).type_as(keypoints_2d)), dim=-1).float().to(cpu_device) # [b,24,3]
     intrinsics = evidence_2d['intrinsics']
     inv_intrinsics = torch.inverse(intrinsics)
 

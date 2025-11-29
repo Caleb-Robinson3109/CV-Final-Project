@@ -7,12 +7,14 @@ from tqdm import tqdm
 from collections import OrderedDict
 from datetime import datetime
 import json
+import time
 
 # local libraries 
 from lib.cores import config 
-from lib.models.smpl import SMPL_59, H36M_TO_J14
+from lib.models.smpl import SMPL_59, H36M_TO_J14, get_smpl_faces
 from lib.models.kitro import KITRO_refine
 from lib.utils.eval_utils import batch_compute_similarity_transform_torch, compute_error_verts_torch
+from cs5404.visual import render_mesh
 
 class SMPL_Estimates_Dataset(Dataset):
     def __init__(self, data_path):
@@ -21,7 +23,7 @@ class SMPL_Estimates_Dataset(Dataset):
             data_path (str): Path to the saved .pth file containing the initial SMPL prediction data.
         """
         # Load the data from the saved .pt file
-        self.data = torch.load(data_path)
+        self.data = torch.load(data_path, map_location=torch.device('cpu'))
         # Number of samples in the dataset
         self.num_samples = self.data['pred_theta'].shape[0]
 
@@ -93,7 +95,7 @@ if __name__ == '__main__':
     quant_pampjpe = {}
     quant_mpvpe = {}
     pbar = tqdm(dataloader, desc='Processing')
-    for batch in pbar:
+    for batch_idx, batch in enumerate(pbar, start = 1):
         # batch should contain dictionaries with keys: 'pred_theta', 'pred_beta', 'pred_cam', 'intrinsics', 'keypoints_2d', 'GT_pose', 'GT_beta'
         curr_batch_size = batch['pred_theta'].shape[0]
         init_smpl_estimate = {
@@ -112,6 +114,14 @@ if __name__ == '__main__':
             refined_cam = updated_smpl_output['refined_cam']
             updated_smpl = smpl(betas=refined_shape, body_pose=refined_thetas[:, 1:], global_orient=refined_thetas[:, 0].unsqueeze(1), pose2rot=False)
             updated_vertices = updated_smpl.vertices
+            
+            # Call to generate and save mesh from SMPL model
+            # Only generates (arbitrarily) mesh for last index of updated_vertices
+            faces = np.array(get_smpl_faces(), dtype = int)
+            verts = updated_vertices[-1].cpu().numpy()
+            file_name = f"{batch_idx}_KITRO.png"
+            render_mesh(verts, faces, file_name)
+            #
 
             # Calculate Joint ERROR with ground truth
             gt_smpl = smpl(global_orient=batch['GT_pose'].to(device)[:,:3], body_pose=batch['GT_pose'].to(device)[:,3:],    betas=batch['GT_beta'].to(device))
