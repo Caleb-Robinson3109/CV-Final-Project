@@ -12,4 +12,6 @@ KITRO.o*
 */venv
 venv/
 /AlphaPose
-test.py
+test*.py
+/hmr
+img*.jpg
