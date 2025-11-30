@@ -71,7 +71,9 @@ class SMPL_Estimates_Dataset(Dataset):
 
 
 def create_kitro_refinement_dataset():
-
+    pass
+    #this works in ../refine_dataset.py
+    """
     path = '../data/refined_both_dataset.pt'
 
     if os.path.exists(path):
@@ -175,6 +177,7 @@ def create_kitro_refinement_dataset():
 
     torch.save(output, output_path)
     print(f"saved enriched dataset to {output_path}")
+    """
 
 
 def save_single_sample():
@@ -242,6 +245,66 @@ def save_small_sample():
 import os
 import torch
 import numpy as np
+
+def combine_dataset():
+    import os
+import torch
+import numpy as np
+
+def combine_dataset():
+    dir_path = '../out'
+    out_path = '../data/ProcessedData_MERGED.pt'
+
+    # Do not overwrite existing combined dataset
+    if os.path.exists(out_path):
+        print(f"{out_path} already exists. Skipping merge.")
+        return
+
+    # Load all .pt files, sorted to keep order stable
+    files = [f for f in os.listdir(dir_path) if f.endswith('.pt')]
+    files.sort()  # ensures dataset_chunk_000.pt → dataset_chunk_001.pt ...
+
+    if len(files) == 0:
+        raise RuntimeError("No .pt files found in ../out")
+
+    print(f"Merging {len(files)} chunk files...")
+
+    # Load first file to initialize "merged"
+    first_path = os.path.join(dir_path, files[0])
+    merged = torch.load(first_path, map_location='cpu')
+
+    # For all remaining chunk files:
+    for fname in files[1:]:
+        full_path = os.path.join(dir_path, fname)
+        print(f"  Adding {fname} ...")
+
+        data = torch.load(full_path, map_location='cpu')
+
+        for key in merged:
+            v1 = merged[key]
+            v2 = data[key]
+
+            # Tensors
+            if torch.is_tensor(v1):
+                merged[key] = torch.cat([v1, v2], dim=0)
+
+            # Lists
+            elif isinstance(v1, list):
+                merged[key] = v1 + v2
+
+            # Numpy arrays
+            elif isinstance(v1, np.ndarray):
+                merged[key] = np.concatenate([v1, v2], axis=0)
+
+            else:
+                raise TypeError(f"Unsupported type for key {key}: {type(v1)}")
+
+    # Save output
+    torch.save(merged, out_path)
+    print(f"Saved merged dataset to {out_path}")
+
+
+
 
 def split_dataset_into_chunks():
     input_path = '../data/ProcessedData_CLIFFpred_w2DKP_Both.pt'
