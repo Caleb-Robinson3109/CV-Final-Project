@@ -46,8 +46,8 @@ from tqdm import tqdm
 import os
 from lib.cores import config
 from lib.models.smpl import SMPL_59
-from lib.models.kitro import KITRO_refine as kitro_refine_gpu
-from lib.models.kitrocpu import KITRO_refine as kitro_refine_cpu
+from lib.models.kitrocpu import KITRO_refine
+
 
 class SMPL_Estimates_Dataset(Dataset):
     def __init__(self, data_path):
@@ -80,7 +80,7 @@ def create_kitro_refinement_dataset():
 
     data_path = '../data/ProcessedData_CLIFFpred_w2DKP_Both.pt'
     output_path = "../data/refined_both_dataset.pt"
-    batch_size_ = 256
+    batch_size_ = 64
     n_refine_loop = 10
     shape_opti_n_iter = 10
 
@@ -137,35 +137,21 @@ def create_kitro_refinement_dataset():
             'keypoints_2d': batch['keypoints_2d'].to(device),
         }
 
-        with torch.no_grad():
-            refined = kitro_refine_cpu(
-                batch_size, 
-                init_smpl_estimate=init_smpl_estimate, 
-                evidence_2d=evidence_2d, 
-                J_regressor=J_regressor, 
-                kitro_cfg=kitro_config, 
-                smpl=smpl
-            ) if device == 'cpu' else kitro_refine_gpu(
-                batch_size,
-                init_smpl_estimate=init_smpl_estimate,
-                evidence_2d=evidence_2d,
-                J_regressor=J_regressor,
-                kitro_cfg=kitro_config,
-                smpl=smpl
-            )
+        refined = KITRO_refine(batch_size, init_smpl_estimate=init_smpl_estimate, evidence_2d=evidence_2d, J_regressor=J_regressor, kitro_cfg=kitro_config, smpl=smpl) 
 
-            refined_thetas = refined['refined_thetas']
-            refined_shape = refined['refined_shape']
-            refined_cam = refined['refined_cam']
 
-            # SMPL forward to get refined vertices
-            refined_smpl = smpl(
-                betas=refined_shape,
-                body_pose=refined_thetas[:, 1:],
-                global_orient=refined_thetas[:, 0].unsqueeze(1),
-                pose2rot=False
-            )
-            refined_vertices = refined_smpl.vertices
+        refined_thetas = refined['refined_thetas']
+        refined_shape = refined['refined_shape']
+        refined_cam = refined['refined_cam']
+
+        # SMPL forward to get refined vertices
+        refined_smpl = smpl(
+            betas=refined_shape,
+            body_pose=refined_thetas[:, 1:],
+            global_orient=refined_thetas[:, 0].unsqueeze(1),
+            pose2rot=False
+        )
+        refined_vertices = refined_smpl.vertices
 
         # Save results (on CPU)
         output['imgname'] += batch['imgname']
@@ -253,6 +239,79 @@ def save_small_sample():
     torch.save(small_sample, out_path)
     print(f"Saved small dataset with {n_samples} samples to {out_path}")
 
+import os
+import torch
+import numpy as np
+
+def split_dataset_into_chunks():
+    input_path = '../data/ProcessedData_CLIFFpred_w2DKP_Both.pt'
+    output_dir = '../data_splits'
+    num_chunks = 100
+    """
+    Splits a large KITRO dataset (.pt saved as dict of tensors/arrays/lists)
+    into `num_chunks` smaller .pt files.
+
+    Each output file preserves batch dimensions and contains the same keys.
+    """
+
+    # Load dataset on CPU
+    print(f"Loading dataset from {input_path} ...")
+    data = torch.load(input_path, map_location='cpu')
+
+    # Get total number of samples from any tensor-like key
+    dataset_length = None
+    for key, value in data.items():
+        if isinstance(value, (torch.Tensor, np.ndarray, list)):
+            dataset_length = len(value)
+            break
+
+    if dataset_length is None:
+        raise RuntimeError("Could not infer dataset length from dataset keys!")
+
+    # Ensure output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Compute chunk size
+    chunk_size = (dataset_length + num_chunks - 1) // num_chunks  # ceiling division
+
+    print(f"Dataset size = {dataset_length}")
+    print(f"Chunk size   = {chunk_size}")
+    print(f"Saving {num_chunks} chunks into {output_dir}/")
+
+    # Generate each chunk
+    for i in range(num_chunks):
+        start = i * chunk_size
+        end = min(start + chunk_size, dataset_length)
+
+        if start >= dataset_length:
+            break  # no more data
+
+        out_path = os.path.join(output_dir, f"dataset_chunk_{i:03d}.pt")
+
+        # Skip if already exists (for overnight runs)
+        if os.path.exists(out_path):
+            print(f"[{i:03d}] {out_path} already exists, skipping.")
+            continue
+
+        chunk = {}
+
+        for key, value in data.items():
+            if isinstance(value, torch.Tensor):
+                chunk[key] = value[start:end]
+            elif isinstance(value, np.ndarray):
+                chunk[key] = torch.from_numpy(value[start:end])
+            elif isinstance(value, list):
+                chunk[key] = value[start:end]
+            else:
+                raise TypeError(f"Unsupported type for key {key}: {type(value)}")
+
+        # Save chunk
+        torch.save(chunk, out_path)
+        print(f"[{i:03d}] Saved {out_path}: {start} → {end}")
+
+    print("Done splitting dataset.")
+
+
 def make_combined_pt():
     path_3dpw = '../data/ProcessedData_CLIFFpred_w2DKP_3dpw.pt'
     path_hm36 = '../data/ProcessedData_CLIFFpred_w2DKP_HM36.pt'
@@ -325,7 +384,7 @@ def get_dataset_post_kitro():
     N = data['pred_theta'].shape[0]
     dataset = []
 
-    for i in range(len(data['imagename'])):
+    for i in range(len(data['pred_theta'])):
         sample = np.concatenate([
             data['pred_theta'][i].reshape(-1),
             data['pred_beta'][i].reshape(-1),
