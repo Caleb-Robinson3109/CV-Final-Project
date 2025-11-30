@@ -179,6 +179,56 @@ def create_kitro_refinement_dataset():
     print(f"saved enriched dataset to {output_path}")
     """
 
+import os
+import torch
+import numpy as np
+
+def combine_range(in_dir, start_idx, end_idx, out_path):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    files = sorted(os.listdir(in_dir))
+    files = [f for f in files if f.endswith(".pt")]  # only PT files
+
+    # select only the subset
+    subset = files[start_idx:end_idx]
+
+    if len(subset) == 0:
+        raise ValueError("No files found in this range")
+
+    merged = {}
+
+    for i, fname in enumerate(subset):
+        fpath = os.path.join(in_dir, fname)
+        data = torch.load(fpath, map_location=device)
+
+        if i == 0:
+            # first file initializes the merged structure
+            for key in data:
+                merged[key] = data[key]
+            continue
+
+        # merge subsequent files
+        for key in data:
+            v_new = data[key]
+            v_old = merged[key]
+
+            if torch.is_tensor(v_new):
+                merged[key] = torch.cat([v_old, v_new], dim=0)
+
+            elif isinstance(v_new, list):
+                merged[key] = v_old + v_new
+
+            else:
+                merged[key] = np.concatenate([v_old, v_new], axis=0)
+
+        # free memory each loop
+        del data
+        torch.cuda.empty_cache()
+
+    # save chunk
+    torch.save(merged, out_path)
+    print(f"Saved chunk: {out_path}")
+
 
 def save_single_sample():
     input_path = '../data/ProcessedData_CLIFFpred_w2DKP_HM36.pt'
