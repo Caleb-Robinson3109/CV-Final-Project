@@ -14,7 +14,6 @@ from lib.cores import config
 from lib.models.smpl import SMPL_59, H36M_TO_J14, get_smpl_faces
 from lib.models.kitro import KITRO_refine
 from lib.utils.eval_utils import batch_compute_similarity_transform_torch, compute_error_verts_torch
-from cs5404.visual import render_mesh
 
 class SMPL_Estimates_Dataset(Dataset):
     def __init__(self, data_path):
@@ -116,12 +115,11 @@ if __name__ == '__main__':
             updated_vertices = updated_smpl.vertices
             
             # Call to generate and save mesh from SMPL model
-            # Only generates (arbitrarily) mesh for last index of updated_vertices
+            # Choice of gif or img save.
+            from cs5404.visual import render_mesh_gif
             faces = np.array(get_smpl_faces(), dtype = int)
-            verts = updated_vertices[-1].cpu().numpy()
-            file_name = f"{batch_idx}_KITRO.png"
-            render_mesh(verts, faces, file_name)
-            #
+            file_name = f"{batch_idx}_KITRO.gif"
+            render_mesh_gif(updated_vertices, faces, file_name)
 
             # Calculate Joint ERROR with ground truth
             gt_smpl = smpl(global_orient=batch['GT_pose'].to(device)[:,:3], body_pose=batch['GT_pose'].to(device)[:,3:],    betas=batch['GT_beta'].to(device))
