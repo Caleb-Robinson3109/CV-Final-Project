@@ -1,5 +1,5 @@
 \section{Related Work}
 \label{sec:relatedword}
 
-- KITRO backstory \\
-- maybe talk about HMR beacuse kitro uses it to genereate keypoints and initial predictions
+KITRO is the model that will be used to generate the predictions that we will use the refine to a further state, that will be used to generate the 3D mesh. It uses 2D keypoints, as well as an HMR model that predicts twenty-four joints, to refine the pose, bone length, and parent joint depth. The 2D keyponts are part what makes the KITRO model excel because it helps the model refine the estimated 3D mesh. To determine the most probable configuration of joints KITRO uses a decision tree. TODO add more\\
+-also talk about HMR becuase kitro is built on top of hmr

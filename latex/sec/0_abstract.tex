@@ -1,7 +1,3 @@
 \begin{abstract}
-The ABSTRACT is to be in fully justified italicized text, at the top of the left-hand column, below the author and affiliation information.
-Use the word ``Abstract'' as the title, in 12-point Times, boldface type, centered relative to the column, initially capitalized.
-The abstract is to be in 10-point, single-spaced type.
-Leave two blank lines after the Abstract, then begin the main text.
-Look at previous \confName abstracts to get a feel for style and length.
+Generation of a 3D human mesh from a 2D image is an important problem in the world of computer vision. There have been many solutions to provide the best model for this task. With the ability to train on predicted values of the model and the ground truths the question arises: Is it possible to have a model stacked on top of the first model to learn the error of the first and try and minimize it, refining the orgional predictions. We will be taking the KITRO model for 3D mesh parameter prediction and combining it with the orginoal data fed to KITRO to train a random forest to refine the predictions of the KITRO model. This will then be used to generated a 3D mesh with our custom visualization tool. We will be using a random forest because it does not utilize gradient decent to learn, which many of the models to predict 3D meshes currently use. !!TODO add a sentence about results!! - We found that the model helps hurts does nothing which shows use this its not effective blah blah blah. These findings are significant because it furthers the understanding of 3D mesh generation models. Of which can be used in many applications.
 \end{abstract}

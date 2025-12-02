@@ -1,7 +1,10 @@
 \section{Datasets}
 \label{sec:datasets}
 
-Within the KITRO reop there are two provided prepossessed datasets. \\
-- the data provided by KITRO \\
-- combininge the datasets \\
-- running kitro on the dataset \\
+KITRO uses two datasets both are provided to us with some processioning done to it.The fist data set is 3DPW. This dataset is one that has many outdoor images tailored for 3D pose and shape estimation. The second dataset that is used is the Human3.6M. This dataset is an indoor 3D mesh dataset. The prepossessing that the KITRO does is converting both into a common format. That format being a Python dictionary with the following values: image name, predicted 3D rotation matrix, predicted body shape parameters, predicted camera translations, intrinsic camera parameters, 2D keypoints, ground truth of 3D rotation parameters, and ground truth of body shape parameters.
+
+With the data given to us we had to transform it to properly work with it. The first step was to split the two datasets into one-hundred smaller sets. This was done because of hardware limits. Due to the amount of memory needed to have all the data into one object. After that we needed to run the KITRO model on all the split datasets. This generated the values for refined thetas, refined shape, refined camera, and refined vertices.
+
+Now there are one-hundred datasets with the orgional given data plus the KITRO refinements. The combining of the datasets was the next task to get a usable dataset. Due to a lack of computer memory five separate datasets were created. To distribute the datasets among the five final datasets, every fifth dataset was combined. With five datasets four where designated as training datasets and one as a testing dataset.
+
+The final step was to flatten the dictionary. The name field was removed and all the data was flattened into one numpy array.
