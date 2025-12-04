@@ -1,8 +1,10 @@
 \section{Results}
 \label{sec:results}
 
-The output of the combined Random Forest regression + KITRO model was sigificantly inaccurate in comparison to KITRO on its own. This was confirmed not only through inspecting the visualized 3D meshes, but also through the R squared scores, which are measures of the similarity of the predicted data to the actual data. 
+The output of the combined Random Forest regression + KITRO model was significantly inaccurate in comparison to KITRO on its own. This was confirmed not only through inspecting the visualized 3D meshes, but also through the R squared scores, which are measures of the similarity of the predicted data to the actual data. Despite training and evaluating the combined model with various combinations of feature columns, all the results were similarly inaccurate in comparison to KITRO on its own.
 
-- KITRO's numbers
-- our numbers
-- mesh generation and images with that
+For example, the current configuration produced an R squared score of about 0.032096, which is an incredibly low score for most use cases. The configuration where the ground truth values were included as dependent (y) values yielded an R squared score of about 0.015, and the one where the refined vertices features were completely omitted yielded an R squared score of about 0.0625578, and the one where both changes were applied yielded a score of about 0.03583. None of these scores indicate a remotely high similarity, meaning that none of them would be satisfactory in practice.
+
+The output images from the visualization script show that, while the shape of the human mesh is generally reasonable, Random Forest regression fails to accurately model the pose of a human mesh. Despite the differing R squared scores of the differently configured trials, all the 3D mesh outputs visually appear to be incredibly similar, although not identical, and they have identical movement patterns. With Random Forest, the output meshes seem to be able to copy some drastic movements, such as bending over, or stretching both arms out in a T-pose, but all copied movements seem to be slightly contracted or diminished. There are a few occasions where the human mesh seems to stretch and warp unnaturally with the combined model's output, particularly when the human is bending over, and the model leaves much to be desired when it comes to copying other movements.
+
+As was noted in another section, despite the fact that KITRO includes SIMPL-X as a dependency, KITRO's output does not seem to be account for changes or existing details in facial expressions. Aside from this, the visualized image outputs present a clear view in which the 3D human meshes are distinct, have visible detail, and are fully contained within the image. With the visualized 3D meshes as GIFs, the motion of the mesh seems to be fluid with KITRO's output on its own, although it is choppier with the combined model, which is likely a result of inaccurate predictions.
