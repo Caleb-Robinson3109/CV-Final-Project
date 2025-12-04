@@ -1,12 +1,21 @@
-\section{Setup}
+\section{Experimental Setup}
 \label{sec:setup}
 
-It seemed to our group that there were three sections of the project that could be worked on concurrently. The first section was the generation of the 3D mesh. Because there were prepocessed datasets, this person could build a 3D mesh visualizer on this data, and later run the same visualizer on the post-Random-Forest data.
+Following the instructions to set up KITRO, two dataset files were downloaded, along with the extra data that included the "smpl" and "spin" directories. These files were placed in the data subdirectory of the project's root directory. Then, every file and subdirectory of the project was copied over onto a user account for the University of Missouri Mill supercomputer.
 
-The second person would be responsible for making the dataset contestable. Because the codebase was new to the team, understanding the given datasets and understanding how to transform it for use would be an important part of the project.
+For running the base KITRO model on the Mill, some modules and dependencies needed to be loaded. Using the appropriate command to load modules on the Mill, the Python 3.10.13 module was loaded. Note that this is different from the default version of Python on the Mill; 3.10.13 is the oldest version of Python listed as a Mill module.
 
-The third person would use scikit-learn to create a Random Forest model, train it, and test the model. Any additional scripts would be created as needed.
+The following dependencies were installed via pip3: chumpy (0.70), matplotlib (3.10.7), numpy (1.23.5), pillow (12.0.0), pyglet (1.5.31), scikit-learn (1.7.2), scipy (1.15.3), smpl (1.5.6), smplx (0.1.28), torch (1.11.0), tqdm (4.67.1), trimesh (4.10.0), wheel (0.45.1). The numpy, pyglet, and torch dependencies in particular need to remain as outdated dependencies. These dependencies were installed on a Mill compute node with 8 CPUs and 4 GB of memory, and some of the listed dependencies are also relevant for running Random Forest on the output or generating images of the 3D meshes.
 
-It was decided that the best way to distribute the files would be through GitHub. This is because the KITRO code was already hosted on GitHub, and it was most the common and streamlined choice for all the team members.
-
-The last step to get the project started was for all of the team members to read and discuss the KITRO paper. This was crucial to make sure the scope and project were clear, and so that the team had an understanding on what was happening with KITRO under the hood. This would then transition into the teams understanding on how to build on top of the KITRO model.
+The scripts could not run using CUDA GPUs on the Mill supercomputer. Upon requesting and obtaining access to a Mill GPU node, all Python dependencies would need to be reinstalled on the GPU node in order to run the scripts. Attempting to install these dependencies, particularly PyTorch (torch 1.11.0), would lead to the GPU node terminating the installation before it could complete, due to a lack of memory space. Thus, when running the base KITRO model on the Mill, the scripts must run within a compute node. Additionally, for this task, a compute node may be needed to run for roughly 1.5 or more hours in order to finish running the KITRO model on one of the two original datasets.
+%
+%It seemed to our group that there were three sections of the project that could be worked on concurrently. The first section was the generation of the 3D mesh. Because there were preprocessed datasets, this person could build a 3D mesh visualizer on this data, and later run the same visualizer on the post-Random-Forest data.
+%
+%The second person would be responsible for making the dataset contestable. Because the codebase was new to the team, understanding the given datasets and understanding how to transform it for use would be an important part of the project.
+%
+%The third person would use scikit-learn to create a Random Forest model, train it, and test the model. Any additional scripts would be created as needed.
+%
+%%It was decided that the best way to distribute the files would be through GitHub. This is because the KITRO code was already hosted on GitHub, and it was most the common and streamlined choice for all the team members.
+%
+%The last step to get the project started was for all of the team members to read and discuss the KITRO paper. This was crucial to make sure the scope and project were clear, and so that the team had an understanding on what was happening with KITRO under the hood. This would then transition into the teams understanding on how to build on top of the KITRO model.
+%
