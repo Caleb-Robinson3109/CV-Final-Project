@@ -1,5 +1,6 @@
 \section{Related Work}
 \label{sec:relatedword}
 
-KITRO is the model that will be used to generate the predictions that we will use the refine to a further state, that will be used to generate the 3D mesh. It uses 2D keypoints, as well as an HMR model that predicts twenty-four joints, to refine the pose, bone length, and parent joint depth. The 2D keyponts are part what makes the KITRO model excel because it helps the model refine the estimated 3D mesh. To determine the most probable configuration of joints KITRO uses a decision tree. TODO add more\\
--also talk about HMR becuase kitro is built on top of hmr
+KITRO is the model that generates the predictions that the new model takes to perform further processing on, ultimately to be used in hopes of generating a more refined 3D mesh. KITRO uses 2D keypoints, as well as an HMR model that predicts twenty-four joints to refine the pose, bone length, and parent joint depth. The 2D keypoints are part of what makes the model excel, because it helps the model fine-tune the estimated 3D mesh. KITRO uses a singular decision tree to determine the most probable configuration of joints: at each branching path on the decision tree, the direction of the path is compared to a corresponding bone location on a human skeleton's kinematic-tree. The overall process is known as kinematic-tree rotation, hence the name of the model.
+
+HMR, which stands for human mesh recovery, is the process of creating a 3D human mesh from a 2D image. In relation to KITRO, the HMR model produces an unrefined mesh, which is then processed by KITRO to refine the mesh.
