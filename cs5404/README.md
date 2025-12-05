@@ -17,6 +17,10 @@ Go to [KITRO README](../KITRO_README.MD) and download the datasets. Place the da
 ## Parts of the Project to Run
 
 ### Make Dataset
+```bash
+chmod +x *.sh
+./make_dataset.sh
+```
 
 ### Run Random Forest
 

@@ -179,10 +179,6 @@ def create_kitro_refinement_dataset():
     print(f"saved enriched dataset to {output_path}")
     """
 
-import os
-import torch
-import numpy as np
-
 def combine_range(in_dir, start_idx, end_idx, out_path):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -292,18 +288,9 @@ def save_small_sample():
     torch.save(small_sample, out_path)
     print(f"Saved small dataset with {n_samples} samples to {out_path}")
 
-import os
-import torch
-import numpy as np
-
 def combine_dataset():
-    import os
-import torch
-import numpy as np
-
-def combine_dataset():
-    dir_path = '../out'
-    out_path = '../data/ProcessedData_MERGED.pt'
+    dir_path = 'out'
+    out_path = 'data/ProcessedData_MERGED.pt'
 
     # Do not overwrite existing combined dataset
     if os.path.exists(out_path):
@@ -357,8 +344,8 @@ def combine_dataset():
 
 
 def split_dataset_into_chunks():
-    input_path = '../data/ProcessedData_CLIFFpred_w2DKP_Both.pt'
-    output_dir = '../data_splits'
+    input_path = 'data/ProcessedData_CLIFFpred_w2DKP_Both.pt'
+    output_dir = 'data'
     num_chunks = 100
     """
     Splits a large KITRO dataset (.pt saved as dict of tensors/arrays/lists)
@@ -426,9 +413,9 @@ def split_dataset_into_chunks():
 
 
 def make_combined_pt():
-    path_3dpw = '../data/ProcessedData_CLIFFpred_w2DKP_3dpw.pt'
-    path_hm36 = '../data/ProcessedData_CLIFFpred_w2DKP_HM36.pt'
-    out_path = "../data/ProcessedData_CLIFFpred_w2DKP_Both.pt"
+    path_3dpw = 'data/ProcessedData_CLIFFpred_w2DKP_3dpw.pt'
+    path_hm36 = 'data/ProcessedData_CLIFFpred_w2DKP_HM36.pt'
+    out_path = "data/ProcessedData_CLIFFpred_w2DKP_Both.pt"
 
     if os.path.exists(out_path):
         return
@@ -464,7 +451,7 @@ def make_combined_pt():
 def get_dataset_pre_kitro():
     make_combined_pt()
 
-    data_path = "../data/ProcessedData_CLIFFpred_w2DKP_Both.pt"
+    data_path = "data/ProcessedData_CLIFFpred_w2DKP_Both.pt"
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     data = torch.load(data_path, map_location=torch.device(device))
     
@@ -490,7 +477,7 @@ def get_dataset_post_kitro():
     make_combined_pt()
     create_kitro_refinement_dataset()
 
-    data_path = "../data/ProcessedData_CLIFFpred_w2DKP_Both.pt"
+    data_path = "data/ProcessedData_CLIFFpred_w2DKP_Both.pt"
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     data = torch.load(data_path, map_location=torch.device(device))
     
@@ -525,12 +512,10 @@ def split_dataset(dataset, num_splits: int):
     parts = [dataset[split] for split in splits]
     return parts
     
-"""
+
 def main():
-    print("main")
-    data = get_dataset_pre_kitro()
-    print(f"{np.shape(data)}")
+    make_combined_pt()
+    split_dataset_into_chunks()
 
 if __name__ == "__main__":
     main()
-"""
