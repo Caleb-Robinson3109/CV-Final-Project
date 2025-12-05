@@ -10,10 +10,10 @@ To run the code, see the instructions in:
 
 ### Final Report
 The final report can be found in the `latex/` directory.  
-Compile `main.tex` using your preferred LaTeX compiler.
+Compile `main.tex` using your favorite LaTeX compiler.
 
 ### KITRO Codebase
 All other code in this repository was originally created by the **KITRO** team.  
 For more information, see their README:
 
-- [KITRO README](./KITRO_README.md)
+- [KITRO README](./KITRO_README.MD)
